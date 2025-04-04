@@ -22,10 +22,16 @@ mkdir -p "$DIR_NAME" && cd "$DIR_NAME"
 
 # 2. Download YouTube video with subtitles and metadata
 yt-dlp --format 'bv+ba' --write-auto-subs --sub-langs zh-Hans,en --write-link --write-thumbnail \
-       --embed-metadata --merge-output-format mp4 --output 'video.mp4' "$YOUTUBE_URL"
+       --embed-metadata --merge-output-format mp4 --output 'video.mp4' "$YOUTUBE_URL" --sub-format "ttml" --convert-subs srt
 
-# 3. Convert VTT subtitle files to SRT format
-vtt_to_srt video.zh-Hans.vtt && vtt_to_srt video.en.vtt
+# 3. Convert VTT subtitle files to SRT format or create empty ones if missing
+# Chinese subtitles
+echo "" >> video.zh-Hans.srt
+# English subtitles
+echo "" >> video.en.srt
+
+# 4.0 Split Chinese srt
+python ../split_srt.py video.zh-Hans.srt
 
 # 4. Convert Chinese SRT to ASS format with dialogue style
 python ../srt_to_ass_dialogue.py video.zh-Hans.srt -o video.zh-Hans.ass -s "Chinese" -d
@@ -34,7 +40,7 @@ python ../srt_to_ass_dialogue.py video.zh-Hans.srt -o video.zh-Hans.ass -s "Chin
 python ../srt_to_ass_dialogue.py video.en.srt -o video.en.ass -s "English" -d
 
 # 6. Create final ASS subtitle file by combining template and language-specific ASS files
-cp ../baoyu_template.ass ./video.ass && cat video.zh-Hans.ass >> video.ass && cat video.en.ass >> video.ass
+cp ../baoyu_template.ass ./video.ass && cat video.en.ass >> video.ass && cat video.zh-Hans.ass >> video.ass
 
 # 7. Create new video!!!
 ffmpeg -i './video.mp4' -vf ass='./video.ass' ./video_with_subtitle.mp4
