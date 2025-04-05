@@ -18,11 +18,15 @@ echo "Starting download and processing for: $YOUTUBE_URL"
 echo "Target directory: $DIR_NAME"
 
 # 1. Create video directory and enter it
-mkdir -p "$DIR_NAME" && cd "$DIR_NAME"
+mkdir -p "output/$DIR_NAME" && cd "$DIR_NAME"
 
 # 2. Download YouTube video with subtitles and metadata
 yt-dlp --format 'bv+ba' --write-auto-subs --sub-langs zh-Hans,en --write-link --write-thumbnail \
        --embed-metadata --merge-output-format mp4 --output 'video.mp4' "$YOUTUBE_URL" --sub-format "ttml" --convert-subs srt
+
+# 2. Generate English subtitle
+ffmpeg -i video.mp4 -ar 16000 -ac 1 -c:a pcm_s16le video.wav
+~/myproject/whisper.cpp/build/bin/whisper-cli -m ~/myproject/whisper.cpp/models/ggml-large-v2.bin -f video.wav -osrt video.en2.srt
 
 # 3. Convert VTT subtitle files to SRT format or create empty ones if missing
 # Chinese subtitles
