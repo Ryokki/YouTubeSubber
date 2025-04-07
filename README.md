@@ -23,4 +23,6 @@ Thanks to
 - [x] Use whisper to generate subtitle
 - [x] Translate subtitle
 - [x] Better subtitle split logic
+- [ ] Environment doc
+- [ ] Batch runnning, such as generate videos in playlist
 
