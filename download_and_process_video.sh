@@ -13,6 +13,7 @@ fi
 # Get arguments
 DIR_NAME="$1"
 YOUTUBE_URL="$2"
+API="deepseek"
 
 # Store the script directory path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,6 +25,7 @@ echo "Script directory: $SCRIPT_DIR"
 # Create video directory and enter it
 mkdir -p "$SCRIPT_DIR/output/$DIR_NAME"
 cd "$SCRIPT_DIR/output/$DIR_NAME"
+echo "$YOUTUBE_URL" > info.md
 
 # Download YouTube video with subtitles and metadata
 yt-dlp --format 'bv+ba' --write-auto-subs --sub-langs zh,en --write-link --write-thumbnail \
@@ -36,7 +38,7 @@ mv video.wav.srt video.en.srt
 python "$SCRIPT_DIR/merge_short_srt_segments.py" --input video.en.srt --length 20
 
 # Translate English SRT to Chinese
- python "$SCRIPT_DIR/translate.py" --input video.en.srt --output video.zh.srt
+python "$SCRIPT_DIR/translate.py" --input video.en.srt --output video.zh.srt --api "$API"
 
 # Split Chinese srt
 python "$SCRIPT_DIR/split_srt.py" video.zh.srt

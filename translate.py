@@ -1,14 +1,66 @@
 import os
 import re
 import time
-from typing import List, Dict
+import requests
+from typing import List, Dict, Union
 from openai import OpenAI
 import argparse
 
 
+class LLMClient:
+    """基础LLM客户端接口"""
+    def chat_completion(self, messages, model, temperature):
+        raise NotImplementedError("子类必须实现此方法")
+
+
+class OpenAIClient(LLMClient):
+    """OpenAI API客户端"""
+    def __init__(self, api_key, base_url=None):
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        
+    def chat_completion(self, messages, model="gpt-3.5-turbo", temperature=0.3):
+        response = self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature
+        )
+        return response.choices[0].message.content
+
+
+class DeepSeekClient(LLMClient):
+    """DeepSeek API客户端"""
+    def __init__(self, api_key, base_url="https://api.deepseek.com"):
+        self.api_key = api_key
+        self.base_url = base_url
+        
+    def chat_completion(self, messages, model="deepseek-chat", temperature=0.3):
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature
+        }
+        
+        response = requests.post(
+            f"{self.base_url}/chat/completions",
+            headers=headers,
+            json=payload
+        )
+        
+        if response.status_code != 200:
+            raise Exception(f"DeepSeek API调用失败: {response.text}")
+            
+        return response.json()["choices"][0]["message"]["content"]
+
+
 class SrtTranslator:
-    def __init__(self, client: OpenAI):
+    def __init__(self, client: LLMClient, model: str = "gpt-3.5-turbo"):
         self.client = client
+        self.model = model
         self.batch_size = 30
 
     def parse_srt(self, file_path: str) -> List[Dict]:
@@ -77,16 +129,16 @@ Example format:
         ])
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": input_text}
-                ],
+            messages = [
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": input_text}
+            ]
+            
+            translation_text = self.client.chat_completion(
+                messages=messages,
+                model=self.model,
                 temperature=0.3
             )
-
-            translation_text = response.choices[0].message.content
 
             # Extract translated segments
             translated_segments = []
@@ -144,17 +196,40 @@ Example format:
         print(f"Translation completed. Output saved to {output_file}")
 
 
+def create_llm_client(api_type):
+    """创建对应的LLM客户端"""
+    if api_type.lower() == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY")
+        base_url = os.environ.get("OPENAI_BASE_URL")
+        return OpenAIClient(api_key=api_key, base_url=base_url), "gpt-3.5-turbo"
+    
+    elif api_type.lower() == "deepseek":
+        api_key = os.environ.get("DEEPSEEK_API_KEY")
+        base_url = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+        return DeepSeekClient(api_key=api_key, base_url=base_url), "deepseek-chat"
+    
+    else:
+        raise ValueError(f"不支持的API类型: {api_type}, 请使用 'openai' 或 'deepseek'")
+
+
 def main():
     parser = argparse.ArgumentParser(description='Translate SRT files')
     parser.add_argument('--input', type=str, required=True, help='Input SRT file path')
     parser.add_argument('--output', type=str, required=True, help='Output SRT file path')
+    parser.add_argument('--api', type=str, default='openai', help='API provider: openai or deepseek')
+    parser.add_argument('--language', type=str, default='Chinese', help='Target language for translation')
+    parser.add_argument('--model', type=str, help='Override default model for the selected API')
 
     args = parser.parse_args()
 
-    target_language = 'Chinese'
-    print(os.environ.get("OPENAI_API_KEY"), "xxxxx", os.environ.get("OPENAI_BASE_URL"))
-    translator = SrtTranslator( OpenAI(api_key=os.environ.get("OPENAI_API_KEY"), base_url=os.environ.get("OPENAI_BASE_URL")))
-    translator.translate_srt(args.input, target_language, args.output)
+    try:
+        client, default_model = create_llm_client(args.api)
+        model = args.model if args.model else default_model
+        
+        translator = SrtTranslator(client, model=model)
+        translator.translate_srt(args.input, args.language, args.output)
+    except Exception as e:
+        print(f"错误: {e}")
 
 
 if __name__ == "__main__":
