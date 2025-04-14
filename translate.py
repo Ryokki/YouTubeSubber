@@ -18,7 +18,7 @@ class OpenAIClient(LLMClient):
     def __init__(self, api_key, base_url=None):
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         
-    def chat_completion(self, messages, model="gpt-3.5-turbo", temperature=0.3):
+    def chat_completion(self, messages, model="gpt-3.5-turbo", temperature=0):
         response = self.client.chat.completions.create(
             model=model,
             messages=messages,
@@ -33,7 +33,7 @@ class DeepSeekClient(LLMClient):
         self.api_key = api_key
         self.base_url = base_url
         
-    def chat_completion(self, messages, model="deepseek-chat", temperature=0.3):
+    def chat_completion(self, messages, model="deepseek-chat", temperature=0):
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
@@ -61,7 +61,7 @@ class SrtTranslator:
     def __init__(self, client: LLMClient, model: str = "gpt-3.5-turbo"):
         self.client = client
         self.model = model
-        self.batch_size = 30
+        self.batch_size = 20
 
     def parse_srt(self, file_path: str) -> List[Dict]:
         """Parse SRT file into a list of subtitle segments"""
@@ -93,7 +93,7 @@ class SrtTranslator:
 
         return subtitles
 
-    def translate_batch(self, batch: List[Dict], target_language: str) -> List[Dict]:
+    def translate_batch(self, batch: List[Dict], target_language: str, previous_sentence: str) -> List[Dict]:
         """Translate a batch of subtitle segments"""
         # Prepare input for translation
         prompt = f"""You are an expert translator specializing in {target_language}, with deep understanding of cultural context and natural speech patterns. Your task is to translate the following video transcript segments.
@@ -113,6 +113,9 @@ Format requirements:
 - Place your translation between the START and END markers
 - Do not add any additional text or explanations
 - Keep one empty line between segments
+
+Context: 
+- previous sentence: {previous_sentence} 
 
 Example format:
 [START_SEG1]
@@ -138,8 +141,10 @@ Now let's walk through the life of a typical DNS query.
             translation_text = self.client.chat_completion(
                 messages=messages,
                 model=self.model,
-                temperature=0.3
+                temperature=0
             )
+
+            print(translation_text)
 
             # Extract translated segments
             translated_segments = []
@@ -171,7 +176,7 @@ Now let's walk through the life of a typical DNS query.
         subtitles = self.parse_srt(input_file)
         total_segments = len(subtitles)
         translated_subtitles = []
-
+        previous_sentence = "empty"
         print(f"Found {total_segments} subtitle segments to translate")
 
         # Process in batches
@@ -180,7 +185,8 @@ Now let's walk through the life of a typical DNS query.
             print(
                 f"Translating batch {i // self.batch_size + 1}/{(total_segments + self.batch_size - 1) // self.batch_size}...")
 
-            translated_batch = self.translate_batch(batch, target_language)
+            translated_batch = self.translate_batch(batch, target_language, previous_sentence)
+            previous_sentence = ''.join([item['text'] for item in batch])
             translated_subtitles.extend(translated_batch)
 
             # Sleep to avoid rate limiting
