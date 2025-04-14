@@ -99,6 +99,7 @@ class SrtTranslator:
         prompt = f"""You are an expert translator specializing in {target_language}, with deep understanding of cultural context and natural speech patterns. Your task is to translate the following video transcript segments.
 
 Key translation principles to follow:
+- The topic is likely computer-related. Keep the translation concise while preserving the original meaning.
 - Prioritize natural, conversational language over literal translations
 - Maintain the original tone and style (casual, formal, humorous, etc.)
 - Adapt idioms and expressions to culturally appropriate equivalents in {target_language}
@@ -115,11 +116,11 @@ Format requirements:
 
 Example format:
 [START_SEG1]
-¿Qué tal?
+Now let's walk through the life of a typical DNS query.
 [END_SEG1]
 
 [START_SEG2]
-¿Cómo estás?
+现在让我们来看看一个典型的 DNS 查询过程
 [END_SEG2]"""
 
         # Create input text with segment markers

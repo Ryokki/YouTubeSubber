@@ -23,6 +23,8 @@ Thanks to
 - [x] Use whisper to generate subtitle
 - [x] Translate subtitle
 - [x] Better subtitle split logic
+- [ ] source subtitle polishing (such as "a a star" => aa*)
+- [ ] translate prompt includes video name
 - [ ] Environment doc
 - [ ] Batch runnning, such as generate videos in playlist
 

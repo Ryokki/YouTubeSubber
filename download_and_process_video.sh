@@ -50,7 +50,7 @@ python "$SCRIPT_DIR/srt_to_ass_dialogue.py" video.zh.srt -o video.zh.ass -s "Chi
 python "$SCRIPT_DIR/srt_to_ass_dialogue.py" video.en.srt -o video.en.ass -s "English" -d
 
 # Create final ASS subtitle file by combining template and language-specific ASS files
-cp "$SCRIPT_DIR/baoyu_template.ass" ./video.ass && cat video.en.ass >> video.ass && cat video.zh.ass >> video.ass
+python "$SCRIPT_DIR/merge_ass.py" "$SCRIPT_DIR/csapp_template.ass" video.en.ass video.zh.ass video.ass
 
 # 7. Create new video 🎉
 ffmpeg -i './video.mp4' -vf ass='./video.ass' ./video_with_subtitle.mp4
